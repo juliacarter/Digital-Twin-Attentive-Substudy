@@ -254,7 +254,7 @@ Examples Answers:
 """
     return FORMAT_INSTRUCTIONS
 
-def process_json_file(input_file, output_dir, include_reasoning=True):
+def process_json_file(input_file, output_dir, include_reasoning=True, attentive_id="-1", attentive_reverse=False, attentive_scale=-1):
     """Process a single JSON file and save the result to output_dir"""
     try:
         with open(input_file, 'r', encoding='utf-8') as f:
@@ -284,10 +284,10 @@ def process_json_file(input_file, output_dir, include_reasoning=True):
             if element.get("Questions"): # Check if block has questions
                 for question in element.get("Questions", []):
                     if question.get("QuestionType") == "DB":
-                        top_level_block_content_lines.append(format_question_text(question, with_answers=False))
+                        top_level_block_content_lines.append(format_question_text(question, False, attentive_id, attentive_reverse, attentive_scale))
                     else:
                         count += 1
-                        top_level_block_content_lines.append(f"Q{count}:\n" + format_question_text(question, with_answers=False))
+                        top_level_block_content_lines.append(f"Q{count}:\n" + format_question_text(question, with_answers=False, attentive_id="QID287"))
 
     top_level_block_content_lines.append(format_instructions(include_reasoning))
 
@@ -305,6 +305,9 @@ if __name__ == "__main__":
     parser.add_argument("--input", help="Input folder containing JSON files", default="./data/mega_persona_json/answer_blocks")
     parser.add_argument("--output_dir", help="Output directory to save LLM prompt text files", default="./text_simulation/text_questions")
     parser.add_argument("--include_reasoning", action="store_true", help="Include reasoning in the output format")
+    parser.add_argument("--attentive_id", default="-1")
+    parser.add_argument("--attentive_reverse", action="store_true")
+    parser.add_argument("--attentive_scale", default="-1")
     
     args = parser.parse_args()
     
@@ -321,6 +324,6 @@ if __name__ == "__main__":
             sys.exit(1)
             
         for input_file in tqdm(input_files):
-            process_json_file(input_file, args.output_dir, args.include_reasoning)
+            process_json_file(input_file, args.output_dir, args.include_reasoning, args.attentive_id, args.attentive_reverse, args.attentive_scale)
     else:
-        process_json_file(args.input, args.output_dir, args.include_reasoning) 
+        process_json_file(args.input, args.output_dir, args.include_reasoning, args.attentive_id, args.attentive_reverse, args.attentive_scale)

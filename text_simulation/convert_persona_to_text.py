@@ -17,16 +17,51 @@ def strip_html(text: any) -> str:
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-def _format_question_text_Matrix(question: dict, with_answers: bool = False) -> str:
+def _format_question_text_Matrix(question: dict, with_answers: bool = False, is_attentive: bool = False, attentive_reverse: bool = True, attentive_scale = 100) -> str:
     """Formats a single question with Matrix type into a readable string."""
     columns = question.get("Columns", [])
     answers = question.get("Answers", {})
     output_options = []
+    attentive_options = []
+    attentive_options.append("Question Type: Matrix\n")
     output_options.append("Question Type: Matrix\n")
     if columns:
+        
+
         output_options.append("Options:\n")
         for i, column_text in enumerate(columns, 1):
             output_options.append(f"  {i} = {strip_html(column_text)}\n")
+        if attentive_reverse:
+            columns = list(reversed(columns))
+            new_answers = answers.get("SelectedByPosition", [])
+            n = len(columns) + 1
+            for i, answer in enumerate(new_answers):
+                new_answer = n - answer
+                new_answers[i] = new_answer
+            pass
+        if attentive_scale != -1:
+            extra = attentive_scale % (len(columns)-1)
+            each = int(attentive_scale / (len(columns)-1))
+            new_columns = []
+            answer_positions = []
+            for i, column_text in enumerate(columns, 1):
+                answer_positions.append(len(new_columns))
+                new_columns.append(column_text)
+                if i != len(columns):
+                    for i in range(each):
+                        new_columns.append("")
+                    if each > 0:
+                        new_columns.append("")
+                        each -= 1
+            new_positions = []
+            for pos in answers.get("SelectedByPosition", []):
+                new_position = answer_positions[pos-1]+1
+                new_positions.append(new_position)
+            answers["SelectedByPosition"] = new_positions
+            columns = new_columns
+        
+        for i, column_text in enumerate(columns, 1):
+            attentive_options.append(f"  {i} = {strip_html(column_text)}\n")
         
         rows = question.get("Rows", [])
         selected_texts = answers.get("SelectedText", [])
@@ -34,37 +69,60 @@ def _format_question_text_Matrix(question: dict, with_answers: bool = False) -> 
 
         for i, row_text_content in enumerate(rows):
             row_display_id = str(i + 1)
+            attentive_options.append(f"{row_display_id}. {strip_html(row_text_content)}\n")
             output_options.append(f"{row_display_id}. {strip_html(row_text_content)}\n")
             
             answer_detail = "[No Answer Provided]"
             if i < len(selected_positions) and i < len(selected_texts):
                 answer_detail = f"{selected_positions[i]} - {strip_html(selected_texts[i])}"
+            attentive_options.append(f"Answer: {answer_detail}\n")
             if with_answers:
                 output_options.append(f"Answer: {answer_detail}\n")
             else:
                 output_options.append(f"Answer: [Masked]\n")
+        attentive_options.append("\n")
         output_options.append("\n")
-
+    if is_attentive:
+        output_options.append("^^^^^")
+        for line in attentive_options:
+            output_options.append(line)
+        output_options.append("^^^^^")
     return ''.join(output_options)
 
 
-def _format_question_text_MC(question: dict, with_answers: bool = False) -> str:
+def _format_question_text_MC(question: dict, with_answers: bool = False, is_attentive: bool = False, attentive_reverse: bool = True) -> str:
     """Formats a single question with MC type into a readable string."""
     options = question.get("Options", [])
     answers = question.get("Answers", {})
     output_options = []
+    attentive_options = []
     selector = question.get("Settings", {}).get("Selector")
     if selector == "MAVR" or selector == "MAHR":
+        attentive_options.append("Question Type: Multiple Choice\n")
         output_options.append("Question Type: Multiple Choice\n")
     elif selector == "SAVR" or selector == "SAHR":
+        attentive_options.append("Question Type: Single Choice\n")
         output_options.append("Question Type: Single Choice\n")
     if options:
         output_options.append("Options:\n")
         for i, option_text in enumerate(options, 1):
             output_options.append(f"  {i} - {strip_html(option_text)}\n")
+        if attentive_reverse:
+            options = reversed(options)
+        for i, option_text in enumerate(options, 1):
+            attentive_options.append(f"  {i} - {strip_html(option_text)}\n")
         
         selected_positions = answers.get("SelectedByPosition", [])
         selected_texts = answers.get("SelectedText", [])
+        if selected_positions is not None:
+            if (selector == "SAVR" or selector == "SAHR"):
+                selected_positions = [selected_positions]
+                selected_texts = [selected_texts]
+            for i, selected_position in enumerate(selected_positions):
+                if i < len(selected_texts):
+                    attentive_options.append(f"Answer: {selected_position} - {strip_html(selected_texts[i])}\n")
+        else:
+            attentive_options.append("Answer: [No Answer Provided]\n")
         if with_answers:
             if selected_positions is not None:
                 if (selector == "SAVR" or selector == "SAHR"):
@@ -79,18 +137,26 @@ def _format_question_text_MC(question: dict, with_answers: bool = False) -> str:
             output_options.append("Answer: [Masked]\n")
 
     output_options.append("\n")
+    if is_attentive:
+        output_options.append("^^^^^")
+        for line in attentive_options:
+            output_options.append(line)
+        output_options.append("^^^^^")
     return ''.join(output_options)
 
-def _format_question_text_TE(question: dict, with_answers: bool = False) -> str:
+def _format_question_text_TE(question: dict, with_answers: bool = False, is_attentive: bool = False, attentive_reverse: bool = False) -> str:
     """Formats a single question text into a readable string."""
     settings = question.get("Settings", {})
     answers = question.get("Answers", {})
     output_options = []
+    attentive_options = []
 
     selector = settings.get("Selector")
     if selector == "FORM":
+        attentive_options.append("Question Type: Text Entry (Form)\n")
         output_options.append("Question Type: Text Entry (Form)\n")
     else:
+        attentive_options.append("Question Type: Text Entry\n")
         output_options.append("Question Type: Text Entry\n")
 
     if selector == "FORM":
@@ -102,7 +168,6 @@ def _format_question_text_TE(question: dict, with_answers: bool = False) -> str:
         for ans_item in form_answers_text:
             if isinstance(ans_item, dict):
                 answer_lookup.update(ans_item)
-
         for i, row_label in enumerate(form_rows):
             clean_row_label = strip_html(row_label)
             answer_value = strip_html(str(answer_lookup.get(row_label, "[No Answer Provided]")))
@@ -110,9 +175,20 @@ def _format_question_text_TE(question: dict, with_answers: bool = False) -> str:
                 output_options.append(f"{clean_row_label}: {answer_value}\n")
             else:
                 output_options.append(f"{clean_row_label}: [Masked]\n")
+        if attentive_reverse:
+            form_rows = reversed(form_rows)
+        for i, row_label in enumerate(form_rows):
+            clean_row_label = strip_html(row_label)
+            answer_value = strip_html(str(answer_lookup.get(row_label, "[No Answer Provided]")))
+            attentive_options.append(f"{clean_row_label}: {answer_value}\n")
+        
 
     elif selector == "SL" or selector == "ML": # Single Line or Multi Line
         text_answer = answers.get("Text")
+        if text_answer is not None:
+            attentive_options.append(f"Answer: {strip_html(str(text_answer))}\n")
+        else:
+            attentive_options.append("Answer: [No Answer Provided]\n")
         if with_answers:
             if text_answer is not None:
                 output_options.append(f"Answer: {strip_html(str(text_answer))}\n")
@@ -121,14 +197,21 @@ def _format_question_text_TE(question: dict, with_answers: bool = False) -> str:
         else:
             output_options.append("Answer: [Masked]\n")
     output_options.append("\n")
+    if is_attentive:
+        output_options.append("^^^^^")
+        for line in attentive_options:
+            output_options.append(line)
+        output_options.append("^^^^^")
     return ''.join(output_options)
 
-def _format_question_text_Slider(question: dict, with_answers: bool = False) -> str:
+def _format_question_text_Slider(question: dict, with_answers: bool = False, is_attentive: bool = False, attentive_reverse: bool = False, attentive_scale = 100) -> str:
     """Formats a single question text into a readable string."""
     answers = question.get("Answers", {})
     output_options = []
+    attentive_options = []
     values = answers.get("Values")
     output_options.append("Question Type: Slider\n")
+    attentive_options.append("Question Type: Slider\n")
     if values:
         statements = question.get("Statements")
         for i, value_item in enumerate(values):
@@ -137,35 +220,46 @@ def _format_question_text_Slider(question: dict, with_answers: bool = False) -> 
             if statement_text_content == "":
                 statement_text_content = "[No Statement Needed]"
             output_options.append(f"{stmt_display_id}. {strip_html(statement_text_content)}\n")
+            attentive_options.append(f"{stmt_display_id}. {strip_html(statement_text_content)}\n")
+            attentive_options.append(f"Answer: {strip_html(str(value_item))}\n")
             if with_answers:
                 output_options.append(f"Answer: {strip_html(str(value_item))}\n")
             else:
                 output_options.append(f"Answer: [Masked]\n")
     else:
+        attentive_options.append("Answer: [No Answer Provided]\n")
         output_options.append("Answer: [No Answer Provided]\n")
     output_options.append("\n")
+    if is_attentive:
+        output_options.append("^^^^^")
+        for line in attentive_options:
+            output_options.append(line)
+        output_options.append("^^^^^")
     return ''.join(output_options)
     
 def _format_question_text_DB(question: dict, with_answers: bool = False) -> str:
     """Formats a single question text into a readable string."""
     return "[Descriptive Information]\n\n"
 
-def format_question_text(question: dict, with_answers: bool = False) -> str:
+def format_question_text(question: dict, with_answers: bool = False, attentive_id: str = "-1", attentive_reverse: bool = False) -> str:
     """Formats a single question text into a readable string."""
     question_text = strip_html(question.get('QuestionText', ''))
     if question_text is None:
         question_text = ""
 
     question_type = question.get("QuestionType")
+    question_id = question.get("QuestionID")
+
+    is_attentive = question_id == attentive_id
 
     if question_type == "Matrix":
-        output_options = _format_question_text_Matrix(question, with_answers)
+        output_options = _format_question_text_Matrix(question, with_answers, is_attentive)
     elif question_type == "MC": # Multiple Choice
-        output_options = _format_question_text_MC(question, with_answers)
+        output_options = _format_question_text_MC(question, with_answers, is_attentive)
     elif question_type == "TE": # Text Entry
-        output_options = _format_question_text_TE(question, with_answers)
+        output_options = _format_question_text_TE(question, with_answers, is_attentive)
     elif question_type == "Slider":
-        output_options = _format_question_text_Slider(question, with_answers)
+        output_options = _format_question_text_Slider(question, with_answers, is_attentive)
     elif question_type == "DB":
         output_options = _format_question_text_DB(question, with_answers)
     else:

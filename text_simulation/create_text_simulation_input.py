@@ -8,6 +8,28 @@ COMBINED_PROMPT_HEADER = """## Persona Profile (This individual's past survey re
 COMBINED_PROMPT_SEPARATOR = """\n\n---\n## New Survey Question & Instructions (Please respond as the persona described above):
 """
 
+def attach_attentive(persona_content, question_content, i):
+    split_content = persona_content.split("\n\n")
+    attentive_question = split_content[i]
+    attentive_question = re.sub(r'Answer:.*', "Answer: [Masked]", attentive_question)
+    split_question = question_content.split("###")
+    just_question = split_question[0]
+    question_numbers = re.findall(r'Q[0-9]*:', question_content)
+    question_head = "Q" + str(len(question_numbers)+1) + ":\n"
+    attentive_question = question_head + attentive_question
+    just_question = just_question.rstrip()
+    just_question = just_question + "\n\n" + attentive_question + "\n\n\n"
+    new_question = just_question + "###" + split_question[1]
+    return new_question
+
+def extract_attentive(question_content):
+    split_attentive = question_content.split("^^^^^")
+    new_content = question_content
+    if len(split_attentive) > 2:
+        new_content = split_attentive[0] + split_attentive[2]
+    attentive_question = split_attentive[1]
+    return new_content, attentive_question
+
 def create_combined_prompts(persona_text_dir, question_prompts_dir, output_combined_prompts_dir):
     """
     Combines persona text files with their corresponding question prompt files to create final LLM prompts.
@@ -78,8 +100,12 @@ def create_combined_prompts(persona_text_dir, question_prompts_dir, output_combi
             with open(question_path, 'r', encoding='utf-8') as qf:
                 question_content = qf.read()
             
+            question_content, attentive_question = extract_attentive(question_content)
+
+            attentive_content = persona_content + attentive_question
+
             # Combine the contents
-            combined_content = f"{COMBINED_PROMPT_HEADER}{persona_content}{COMBINED_PROMPT_SEPARATOR}{question_content}"
+            combined_content = f"{COMBINED_PROMPT_HEADER}{attentive_content}{COMBINED_PROMPT_SEPARATOR}{question_content}"
             
             # Create output file
             output_filename = f"{pid}_prompt.txt"
@@ -101,6 +127,7 @@ if __name__ == "__main__":
     parser.add_argument("--persona_text_dir", default="text_simulation/text_personas", help="Directory containing persona text files (output of batch_convert_personas.py).")
     parser.add_argument("--question_prompts_dir", default="text_simulation/text_questions", help="Directory containing question LLM prompt files (output of convert_question_json_to_text.py).")
     parser.add_argument("--output_combined_prompts_dir", default="text_simulation/text_simulation_input", help="Directory to save the final combined LLM prompts.")
+    parser.add_argument("--attentive_question", default=False)
     
     args = parser.parse_args()
     

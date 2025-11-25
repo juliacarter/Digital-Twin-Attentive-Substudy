@@ -130,8 +130,10 @@ async def get_llm_response_with_internal_retry(
     try:
         if provider.lower() == "gemini":
             return await _get_gemini_response_direct(prompt, config)
+            #return {"response_text": prompt, "usage_details": {}}
         elif provider.lower() == "openai":
             return await _get_openai_response_direct(prompt, config)
+            #return {"response_text": prompt, "usage_details": {}}
         else:
             raise ValueError(f"Unsupported provider: {provider}")
     except Exception as e: # Catch exceptions from the direct calls after their retries
@@ -201,7 +203,7 @@ async def _process_single_prompt_attempt_with_verification(
 async def process_prompts_batch(
     prompts: List[Tuple[str, str]],
     config: LLMConfig,
-    provider: str = "gemini",
+    provider: str = "openai",
     desc: Optional[str] = "Processing LLM prompts and verifying"
 ) -> Dict[str, Dict[str, Union[str, Dict]]]:
     semaphore = asyncio.Semaphore(config.max_concurrent_requests)
@@ -247,34 +249,34 @@ if __name__ == "__main__":
             ("p4", "This prompt might be blocked for safety reasons.") # Test potential blocking
         ]
         
-        print("\nProcessing Gemini prompts with mock verification...")
-        results_gemini = await process_prompts_batch(prompts, gemini_config, provider="gemini", desc="Gemini Calls+Verify")
-        for pid, resp in results_gemini.items():
-            if "error" in resp and resp["error"]:
-                print(f"Gemini - Prompt {pid} FINAL ERROR: {resp['error']}")
-                if resp.get("llm_response_data") and resp["llm_response_data"] != resp: # Avoid printing self if error object *is* llm_response_data
-                    print(f"  LLM data at failure: {resp['llm_response_data']}")
-            else:
-                print(f"Gemini - Prompt {pid} FINAL OK. Response: '{resp.get('response_text', '')[:50]}...' Tokens: {resp.get('usage_details', {}).get('total_token_count')}")
+        #print("\nProcessing Gemini prompts with mock verification...")
+        #results_gemini = await process_prompts_batch(prompts, gemini_config, provider="gemini", desc="Gemini Calls+Verify")
+        #for pid, resp in results_gemini.items():
+        #    if "error" in resp and resp["error"]:
+        #        print(f"Gemini - Prompt {pid} FINAL ERROR: {resp['error']}")
+        #        if resp.get("llm_response_data") and resp["llm_response_data"] != resp: # Avoid printing self if error object *is* llm_response_data
+        #            print(f"  LLM data at failure: {resp['llm_response_data']}")
+        #    else:
+        #        print(f"Gemini - Prompt {pid} FINAL OK. Response: '{resp.get('response_text', '')[:50]}...' Tokens: {resp.get('usage_details', {}).get('total_token_count')}")
         
         # Test OpenAI
         # Ensure OPENAI_API_KEY is set if you uncomment this
-        # openai_api_key = os.environ.get("OPENAI_API_KEY")
-        # if openai_api_key:
-        #     openai_config = LLMConfig(
-        #         model_name="gpt-3.5-turbo",
-        #         temperature=0.7, max_tokens=50, max_retries=2, max_concurrent_requests=2,
-        #         verification_callback=mock_verification_callback,
-        #         verification_callback_args={"path_info": "/dummy/path/openai", "another_arg": "test_val"}
-        #     )
-        #     print("\nProcessing OpenAI prompts with mock verification...")
-        #     results_openai = await process_prompts_batch(prompts[:2], openai_config, provider="openai", desc="OpenAI Calls+Verify")
-        #     for pid, resp in results_openai.items():
-        #         if "error" in resp:
-        #             print(f"OpenAI - Prompt {pid} FINAL ERROR: {resp['error']}")
-        #         else:
-        #             print(f"OpenAI - Prompt {pid} FINAL OK. Response: '{resp.get('response_text', '')[:50]}...' Tokens: {resp.get('usage_details', {}).get('total_token_count')}")
-        # else:
-        #     print("\nSkipping OpenAI test as OPENAI_API_KEY is not set.")
+        openai_api_key = os.environ.get("OPENAI_API_KEY")
+        if openai_api_key:
+            openai_config = LLMConfig(
+                model_name="gpt-3.5-turbo",
+                temperature=0.7, max_tokens=50, max_retries=2, max_concurrent_requests=2,
+                verification_callback=mock_verification_callback,
+                verification_callback_args={"path_info": "/dummy/path/openai", "another_arg": "test_val"}
+            )
+            print("\nProcessing OpenAI prompts with mock verification...")
+            results_openai = await process_prompts_batch(prompts[:2], openai_config, provider="openai", desc="OpenAI Calls+Verify")
+            for pid, resp in results_openai.items():
+                if "error" in resp:
+                    print(f"OpenAI - Prompt {pid} FINAL ERROR: {resp['error']}")
+                else:
+                    print(f"OpenAI - Prompt {pid} FINAL OK. Response: '{resp.get('response_text', '')[:50]}...' Tokens: {resp.get('usage_details', {}).get('total_token_count')}")
+        else:
+            print("\nSkipping OpenAI test as OPENAI_API_KEY is not set.")
 
     asyncio.run(main()) 
