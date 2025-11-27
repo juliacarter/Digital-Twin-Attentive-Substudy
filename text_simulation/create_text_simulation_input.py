@@ -8,20 +8,6 @@ COMBINED_PROMPT_HEADER = """## Persona Profile (This individual's past survey re
 COMBINED_PROMPT_SEPARATOR = """\n\n---\n## New Survey Question & Instructions (Please respond as the persona described above):
 """
 
-def attach_attentive(persona_content, question_content, i):
-    split_content = persona_content.split("\n\n")
-    attentive_question = split_content[i]
-    attentive_question = re.sub(r'Answer:.*', "Answer: [Masked]", attentive_question)
-    split_question = question_content.split("###")
-    just_question = split_question[0]
-    question_numbers = re.findall(r'Q[0-9]*:', question_content)
-    question_head = "Q" + str(len(question_numbers)+1) + ":\n"
-    attentive_question = question_head + attentive_question
-    just_question = just_question.rstrip()
-    just_question = just_question + "\n\n" + attentive_question + "\n\n\n"
-    new_question = just_question + "###" + split_question[1]
-    return new_question
-
 def extract_attentive(question_content):
     split_attentive = question_content.split("^^^^^")
     new_content = question_content

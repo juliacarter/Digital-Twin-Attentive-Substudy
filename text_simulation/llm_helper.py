@@ -130,10 +130,8 @@ async def get_llm_response_with_internal_retry(
     try:
         if provider.lower() == "gemini":
             return await _get_gemini_response_direct(prompt, config)
-            #return {"response_text": prompt, "usage_details": {}}
         elif provider.lower() == "openai":
             return await _get_openai_response_direct(prompt, config)
-            #return {"response_text": prompt, "usage_details": {}}
         else:
             raise ValueError(f"Unsupported provider: {provider}")
     except Exception as e: # Catch exceptions from the direct calls after their retries
