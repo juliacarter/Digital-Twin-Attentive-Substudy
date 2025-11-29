@@ -9,18 +9,20 @@ ATTENTIVE_REVERSE=false
 ATTENTIVE_SCALE=-1
 RUN_LLM=true
 
-PARSED_ARGUMENTS=$(getopt -n run_pipeline --long max_personas:,attentive_id:,attentive_reverse,attentive_scale:,dry_run -- "$@")
+PARSED_ARGUMENTS=$(getopt -a -n run_pipeline --long max_personas:,attentive_id:,attentive_reverse,attentive_scale:,dry_run -- "$@")
 
 eval set -- "$PARSED_ARGUMENTS"
 while :
 do
     case "$1" in
-        --max_personas) MAX_PERSONAS=$2 ; shift ;;
-        --attentive_id) ATTENTIVE_ID=$2 ; shift ;;
+        --max_personas) MAX_PERSONAS=$2 ; shift 2 ;;
+        --attentive_id) ATTENTIVE_ID="$2" ; shift 2 ;;
         --attentive_reverse) ATTENTIVE_REVERSE=true ; shift ;;
-        --attentive_scale) ATTENTIVE_SCALE=$2 ; shift ;;
+        --attentive_scale) ATTENTIVE_SCALE=$2 ; shift 2 ;;
         --dry_run) RUN_LLM=false ; shift ;; 
         --) shift; break ;;
+        *) echo "Unexpected option: $1 - this should not happen."
+       usage ;;
     esac
 done
 
@@ -56,7 +58,8 @@ poetry run python text_simulation/batch_convert_personas.py \
     --output_text_dir text_simulation/text_personas \
     --variant full
 
-if["$ATTENTIVE_REVERSE" = true] ; then
+if ($ATTENTIVE_REVERSE)
+then
     echo "Step 2: Converting question JSON to text..."
     poetry run python text_simulation/convert_question_json_to_text.py \
         --attentive_id "$ATTENTIVE_ID" \
@@ -67,12 +70,15 @@ else
     poetry run python text_simulation/convert_question_json_to_text.py \
         --attentive_id "$ATTENTIVE_ID" \
         --attentive_scale $ATTENTIVE_SCALE
+fi
 
 echo "Step 3: Creating text simulation input..."
 poetry run python text_simulation/create_text_simulation_input.py 
 
-if["$RUN_LLM" = true] ; then
+if ($RUN_LLM)
+then
     echo "Step 4: Running LLM simulation..."
-    poetry run python text_simulation/run_LLM_simulations.py --config text_simulation/configs/openai_config.yaml --max_personas "$MAX_PERSONAS"
+    poetry run python text_simulation/run_LLM_simulations.py --config text_simulation/configs/attentive_config.yaml --max_personas "$MAX_PERSONAS"
+fi
 
 echo "Pipeline completed!" 

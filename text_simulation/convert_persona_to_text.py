@@ -19,8 +19,8 @@ def strip_html(text: any) -> str:
 
 def _format_question_text_Matrix(question: dict, with_answers: bool = False, is_attentive: bool = False, attentive_reverse=False, attentive_scale=-1) -> str:
     """Formats a single question with Matrix type into a readable string."""
-    columns = question.get("Columns", [])
-    answers = question.get("Answers", {})
+    columns = question.get("Columns", []).copy()
+    answers = question.get("Answers", {}).copy()
     output_options = []
     output_options.append("Question Type: Matrix\n")
     if columns:
@@ -36,8 +36,9 @@ def _format_question_text_Matrix(question: dict, with_answers: bool = False, is_
                 new_answers[i] = new_answer
             pass
         if is_attentive & (attentive_scale != -1):
-            extra = attentive_scale % (len(columns)-1)
-            each = int(attentive_scale / (len(columns)-1))
+            real_scale = attentive_scale - len(columns)
+            extra = real_scale % (len(columns)-1)
+            each = int(real_scale / (len(columns)-1))
             new_columns = []
             answer_positions = []
             for i, column_text in enumerate(columns, 1):
@@ -46,9 +47,9 @@ def _format_question_text_Matrix(question: dict, with_answers: bool = False, is_
                 if i != len(columns):
                     for i in range(each):
                         new_columns.append("")
-                    if each > 0:
+                    if extra > 0:
                         new_columns.append("")
-                        each -= 1
+                        extra -= 1
             new_positions = []
             for pos in answers.get("SelectedByPosition", []):
                 new_position = answer_positions[pos-1]+1
@@ -79,8 +80,8 @@ def _format_question_text_Matrix(question: dict, with_answers: bool = False, is_
 
 def _format_question_text_MC(question: dict, with_answers: bool = False, is_attentive: bool = False, attentive_reverse=False, attentive_scale=-1) -> str:
     """Formats a single question with MC type into a readable string."""
-    options = question.get("Options", [])
-    answers = question.get("Answers", {})
+    options = question.get("Options", []).copy()
+    answers = question.get("Answers", {}).copy()
     output_options = []
     selector = question.get("Settings", {}).get("Selector")
     if selector == "MAVR" or selector == "MAHR":
@@ -147,7 +148,7 @@ def _format_question_text_MC(question: dict, with_answers: bool = False, is_atte
 def _format_question_text_TE(question: dict, with_answers: bool = False, is_attentive: bool = False, attentive_reverse=False, attentive_scale=-1) -> str:
     """Formats a single question text into a readable string."""
     settings = question.get("Settings", {})
-    answers = question.get("Answers", {})
+    answers = question.get("Answers", {}).copy()
     output_options = []
 
     selector = settings.get("Selector")
@@ -191,11 +192,11 @@ def _format_question_text_TE(question: dict, with_answers: bool = False, is_atte
     output_options.append("\n")
     return ''.join(output_options)
 
-def _format_question_text_Slider(question: dict, with_answers: bool = False, is_attentive: bool = False, attentive_reverse: bool = False, attentive_scale = 100) -> str:
+def _format_question_text_Slider(question: dict, with_answers: bool = False, is_attentive: bool = False, attentive_reverse: bool = False, attentive_scale = -1) -> str:
     """Formats a single question text into a readable string."""
-    answers = question.get("Answers", {})
+    answers = question.get("Answers", {}).copy()
     output_options = []
-    values = answers.get("Values")
+    values = answers.get("Values").copy()
     output_options.append("Question Type: Slider\n")
     if values:
         statements = question.get("Statements")
@@ -235,8 +236,9 @@ def format_question_text(question: dict, with_answers: bool = False, attentive_i
     question_type = question.get("QuestionType")
     question_id = question.get("QuestionID")
 
-    id_match = question_id == attentive_id
-    is_attentive = question_id == "-2"
+    is_attentive = question_id == attentive_id
+    #is_attentive = (attentive_id == "-2")
+
 
     if attentive_scale is not int:
         attentive_scale = int(attentive_scale)
@@ -254,8 +256,8 @@ def format_question_text(question: dict, with_answers: bool = False, attentive_i
         output_options = _format_question_text_DB(question, with_answers)
     else:
         raise ValueError(f"Unhandled question type: {question_type}")
-    if id_match:
-        output_options += "^^^^^" + format_question_text(question, True, "-2", attentive_reverse, attentive_scale) + "^^^^^"
+    if is_attentive:
+        output_options += "^^^^^" + format_question_text(question, True, "-1", attentive_reverse, attentive_scale) + "^^^^^"
         pass
 
 

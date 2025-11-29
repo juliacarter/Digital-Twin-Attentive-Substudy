@@ -287,7 +287,7 @@ def process_json_file(input_file, output_dir, include_reasoning=True, attentive_
                         top_level_block_content_lines.append(format_question_text(question, False, attentive_id, attentive_reverse, attentive_scale))
                     else:
                         count += 1
-                        top_level_block_content_lines.append(f"Q{count}:\n" + format_question_text(question, False, args.attentive_id, args.attentive_reverse, args.attentive_scale))
+                        top_level_block_content_lines.append(f"Q{count}:\n" + format_question_text(question, False, attentive_id, attentive_reverse, attentive_scale))
 
     top_level_block_content_lines.append(format_instructions(include_reasoning))
 
@@ -305,9 +305,9 @@ if __name__ == "__main__":
     parser.add_argument("--input", help="Input folder containing JSON files", default="./data/mega_persona_json/answer_blocks")
     parser.add_argument("--output_dir", help="Output directory to save LLM prompt text files", default="./text_simulation/text_questions")
     parser.add_argument("--include_reasoning", action="store_true", help="Include reasoning in the output format")
-    parser.add_argument("--attentive_id", default="QID287")
+    parser.add_argument("--attentive_id", default="-1")
     parser.add_argument("--attentive_reverse", action="store_true")
-    parser.add_argument("--attentive_scale", default="100")
+    parser.add_argument("--attentive_scale", default="-1")
     
     args = parser.parse_args()
     
